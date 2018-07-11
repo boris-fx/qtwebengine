@@ -28,6 +28,8 @@ contains(QT_CONFIG, qt_framework) {
 }
 msvc: QMAKE_LFLAGS *= /LARGEADDRESSAWARE
 
+linux: QMAKE_LFLAGS *= -Wl,-z,origin -Wl,-rpath,\'\$\$ORIGIN/../lib\'
+
 contains(QT_CONFIG, qt_framework) {
     target.path = $$[QT_INSTALL_LIBS]/QtWebEngineCore.framework/Versions/5/Helpers
 } else {
