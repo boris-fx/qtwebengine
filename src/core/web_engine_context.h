@@ -84,6 +84,8 @@ public:
     void destroyBrowserContext();
     void destroy();
 
+    static scoped_refptr<WebEngineContext> &instance();
+
 private:
     friend class base::RefCounted<WebEngineContext>;
     WebEngineContext();

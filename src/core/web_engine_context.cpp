@@ -101,7 +101,6 @@ QT_END_NAMESPACE
 
 namespace {
 
-scoped_refptr<QtWebEngineCore::WebEngineContext> sContext;
 static bool s_destroyed = false;
 
 void destroyContext()
@@ -109,8 +108,8 @@ void destroyContext()
     // Destroy WebEngineContext before its static pointer is zeroed and destructor called.
     // Before destroying MessageLoop via destroying BrowserMainRunner destructor
     // WebEngineContext's pointer is used.
-    sContext->destroy();
-    sContext = 0;
+    WebEngineContext::instance()->destroy();
+    WebEngineContext::instance() = nullptr;
     s_destroyed = true;
 }
 
@@ -188,7 +187,7 @@ void WebEngineContext::destroy()
     m_browserRunner.reset(0);
 
     // Drop the false reference.
-    sContext->Release();
+    instance()->Release();
 }
 
 WebEngineContext::~WebEngineContext()
@@ -199,18 +198,27 @@ WebEngineContext::~WebEngineContext()
     Q_ASSERT(!m_browserRunner);
 }
 
-scoped_refptr<WebEngineContext> WebEngineContext::current()
+scoped_refptr<WebEngineContext> &WebEngineContext::instance()
 {
-    if (s_destroyed)
-        return nullptr;
-    if (!sContext.get()) {
-        sContext = new WebEngineContext();
+    static scoped_refptr<QtWebEngineCore::WebEngineContext> sContext =
+    []() {
+        auto ctx = new WebEngineContext();
+
         // Make sure that we ramp down Chromium before QApplication destroys its X connection, etc.
         qAddPostRoutine(destroyContext);
+
         // Add a false reference so there is no race between unreferencing sContext and a global QApplication.
-        sContext->AddRef();
-    }
+        ctx->AddRef();
+
+        return ctx;
+    }();
+
     return sContext;
+}
+
+scoped_refptr<WebEngineContext> WebEngineContext::current()
+{
+    return s_destroyed ? nullptr : instance();
 }
 
 QSharedPointer<BrowserContextAdapter> WebEngineContext::defaultBrowserContext()
